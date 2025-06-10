@@ -45,6 +45,6 @@ int main(){
 
     vecSort(sortVec);
     vecSort(sortVecPtr);
-}
+} // destrcuter called for sortVec as it is now out of scope.
 
 
