@@ -64,11 +64,11 @@ int main(){
         sortVecPtr.push_back(new int(rand() % vecSize)); // Allocate and store a random number. The pointer is stored in the stack, the data in the heap.
     }
 
-    vecSort(sortVec);
-    vecSort(sortVecSmartPtr);
-    vecSort(sortVecPtr);
-
-    std::vector<int> returnVec = vecSortReturnVal(sortVec);
+    vecSort(sortVec); // sorts vector by reference.
+    vecSort(sortVecSmartPtr); // uses smart pointers.
+    vecSort(sortVecPtr); // uses regular pointers.
+    
+    std::vector<int> returnVec = vecSortReturnVal(sortVec); // sorts vector, then passes the value to new vector 'returnVec.'
 } // both sortVec, returnVec, and sortVecPtr are automatically destroyed as they have gone out of scope.
 
 
