@@ -12,7 +12,7 @@ int sort(std::vector<int> &sortVec)
     for(int i =0; i<vecEls; i++){ // applies sorting algorithm to entire vector.
         for (int i = sortCount; i < vecEls-1; i++) { // sorts for the largest number from the first position to the last position of the vector.
             if(sortVec[i+1] > largest) { // if greater than 0, largest current number has been found.
-                largest=sortVec[i+1]; // assigns largest number
+                largest = sortVec[i+1]; // assigns largest number
                 sortVec[i+1] = sortVec[sortCount]; // takes the current first number position and moves it to the position of the largest number in the vector.
                 sortVec[sortCount] = largest; // move the current largest number to the first position of the vector.  
             }
@@ -20,7 +20,6 @@ int sort(std::vector<int> &sortVec)
         sortCount++; // increments the starting position of the vector.
         largest = sortVec[sortCount]; // sets the new largest number starting point to the new starting positon of the vector.
     }
-
     return 0;
 }
 
