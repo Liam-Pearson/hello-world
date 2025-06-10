@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <chrono>
 #include <ctime>
+#include <memory>
 
 int vecSize = 10000;
 
@@ -19,32 +20,28 @@ void vecSort(std::vector<int> &sortVec){
     runTime(start); // calcultates function run time.
 }
 
-void vecSort(std::vector<int*> &sortVecPtr){
+void vecSort(std::vector<std::unique_ptr<int>> &sortVecPtr){
     auto start = std::chrono::high_resolution_clock::now(); // start time.
     std::sort(sortVecPtr.begin(), sortVecPtr.end(), [](int* a, int*b){
         return *a < *b; // comparator compares prt values, rather than memory addresses.
     }); // sorts the vector.
-    
-    for (auto ptr : sortVecPtr) { // deletes pointers to avoid memory leaks.
-        delete ptr;
-    }
     runTime(start); // calcultates function run time.
 }
 
 int main(){
     std::vector<int> sortVec(vecSize); // initializes a vector with 10,000 elements. Vector object is on the stack, data in on the heap.
-    std::vector<int*> sortVecPtr;
+    std::vector<std::unique_ptr<int>> sortVecPtr;
     sortVecPtr.reserve(vecSize);
 
     srand(time(nullptr));
 
     for(int i=0;i<vecSize;i++){ // indexes through the vector, assigning each position a random number.
         sortVec[i] = rand() %vecSize;
-        sortVecPtr.push_back(new int(rand() % 10000)); // Allocate and store a random number. The pointer is stored in the stack, the data in the heap.
+        sortVecPtr.push_back(std::make_unique<int>(rand() %vecSize)); // Allocate and store a random number. The pointer is stored in the stack, the data in the heap.
     }    
 
     vecSort(sortVec);
     vecSort(sortVecPtr);
-} // destrcuter called for sortVec as it is now out of scope.
+} // both sortVec and sortVecPtr are automatically destroyed as they have gone out of scope.
 
 
