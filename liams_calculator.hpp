@@ -3,6 +3,8 @@
 */
 
 #include <iostream>
+#include <string>
+#include <vector>
 
 namespace calculator{
 
@@ -11,6 +13,8 @@ namespace calculator{
 		calculator(std::ostream& debug_log);
 
 		float execute(std::string const equation);
+
+		float calc(std::vector<float> nums, std::vector<char> ops);
 	private:
 		float add(float const a, float const b);
 		float subtract(float const a, float const b);
@@ -20,6 +24,8 @@ namespace calculator{
 		float pow(float const base, float const exp);		
 		float fact_i(int const n); // iterative factorial
 		float fact_r(int const n); // recursive factorial
+
+		
 
 		std::ostream& debug_log;
 		
