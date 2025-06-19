@@ -14,6 +14,8 @@ float calculator::calculator::execute(std::string const equation){
     std::vector<char> operators;
 
     std::string current_number;
+    
+    std::string editableEquation;
 
     for (char c : equation){ // checks all characters of the string.
         if (std::isdigit(c) || c == '.'){ // checks if 'c' is a number.
@@ -29,22 +31,95 @@ float calculator::calculator::execute(std::string const equation){
         }
     }
 
-    int opIndex = 0;
-    for (char c : operators){
-        if (c == '('){
-            
-        }
-    }
-
     if (!current_number.empty()) { // accounts for the last number.
         numbers.push_back(std::stof(current_number));
     }
 
-    numbers[0] = calc(numbers, operators);
+    editableEquation = equation;
 
-    std::cout << "\nAns: " << numbers[0];
-    
+    std::cout << "\n" << equationEater(editableEquation);
+
     return 0;
+}
+
+std::string calculator::calculator::equationEater(std::string equation){
+
+    std::string editableEquation = equation;
+
+    std::vector<float> numbers;
+    std::vector<char> operators;
+
+    std::string current_number;
+
+    std::vector<float> tempNumbers; // temp vector for numbers contained in brackets.
+    std::vector<char> tempOperators; // temp vector for operators containedin brackets.
+    std::string tempEquation;
+    std::vector<int> leftRightIndex;
+
+    leftRightIndex = bracketDetect(equation);
+    
+    tempEquation = equation.substr(leftRightIndex[0]+1, leftRightIndex[1]-2 - leftRightIndex[0]+1);
+
+    for (char c : tempEquation){ // checks all characters of the string.
+        if (std::isdigit(c) || c == '.'){ // checks if 'c' is a number.
+            current_number += c; // sets the current number string to 'c'.
+        }
+        else {
+            if(!current_number.empty()){ // if current number is not empty, place the current_number into the numbers vector.
+                tempNumbers.push_back(std::stof(current_number));
+                current_number.clear();
+            }
+
+            tempOperators.push_back(c); // place the operator into the operators vector.
+        }
+    }
+
+    if (!current_number.empty()) { // accounts for the last number.
+        tempNumbers.push_back(std::stof(current_number));
+    }
+
+    int result = calc(tempNumbers, tempOperators);
+    std::string strResult = std::to_string(result);
+
+    editableEquation.erase(leftRightIndex[0],leftRightIndex[1]-leftRightIndex[0]+1); // erase the operator used for the calculation.
+    editableEquation.replace(leftRightIndex[0],1,strResult);
+    if(leftRightIndex[2]>1){
+        editableEquation += ')';
+    }
+
+    return editableEquation;
+}
+
+std::vector<int> calculator::calculator::bracketDetect(std::string ops){
+    int index = 0;
+    int leftBracketIndex = 0;
+    int rightBracketIndex = 0;
+    int bracketCounter = 0;
+
+    std::string operators = ops; // vector containing all operator characters.
+
+    std::vector<int> leftRightIndex; // vector to contain the left and right bracket index.
+
+    for (int i = 0; i < operators.size(); ++i){ // goes through the vector until a closing bracket ')' is found.
+        if (operators[i] == '('){
+            leftBracketIndex = index;
+            std::cout << "\nOpening bracket at operator # " << leftBracketIndex;
+            bracketCounter++;
+        }
+        if (operators[i] == ')'){
+            rightBracketIndex = index;
+            std::cout << "\nClosing bracket at operator # " << rightBracketIndex;
+            break;
+        }
+        index++;
+    }
+
+    // assigns left and right bracket index positions.
+    leftRightIndex.push_back(leftBracketIndex);
+    leftRightIndex.push_back(rightBracketIndex);
+    leftRightIndex.push_back(bracketCounter);
+
+    return leftRightIndex;
 }
 
 float calculator::calculator::calc(std::vector<float> nums, std::vector<char> ops){

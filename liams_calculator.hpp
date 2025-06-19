@@ -15,6 +15,10 @@ namespace calculator{
 		float execute(std::string const equation);
 
 		float calc(std::vector<float> nums, std::vector<char> ops);
+
+		std::vector<int> bracketDetect(std::string ops);
+		std::string equationEater(std::string equation);
+
 	private:
 		float add(float const a, float const b);
 		float subtract(float const a, float const b);
