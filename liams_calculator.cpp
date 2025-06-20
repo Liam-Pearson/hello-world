@@ -12,31 +12,67 @@ calculator::calculator::calculator(std::ostream& debug_log):debug_log(debug_log)
 
 float calculator::calculator::execute(std::string const equation){
 
-    std::string cleanedEquation;
+    std::string currentEquation = equationLeadEndOpCleanup(wrapInBrackets(equation));
 
-    if(containsOperator(equation) == true){
-        if(consecutiveOperators(equationLeadEndOpCleanup(equation)) == false && bracketsMatch(equationLeadEndOpCleanup(equation)) == true){
-            cleanedEquation = equationLeadEndOpCleanup(wrapInBrackets(equation));
-            std::cout << "\nEquation: " << cleanedEquation;
-            numBeforeAfter(cleanedEquation, findInnermostBrackets(cleanedEquation));
-            cleanedEquation = replacement(evaluateExpressionAsString(extractSubstring(cleanedEquation, findInnermostBrackets(cleanedEquation))),cleanedEquation, findInnermostBrackets(cleanedEquation));
-            cleanedEquation = insertMultiplicationAroundBrackets(cleanedEquation, numBeforeAfter(cleanedEquation, findInnermostBrackets(cleanedEquation)), findInnermostBrackets(cleanedEquation));
-        }
-    }
-    else {
-        std::cout << "\nEquation does not contain any operators";
+    // avoid infinite loops
+    int maxIterations = 1000;
+    int iterations = 0;
+
+    while (containsOperator(currentEquation) && iterations < maxIterations) {
+    if (consecutiveOperators(currentEquation)) break;
+    if (!bracketsMatch(currentEquation)) break;
+
+    // find innermost brackets once per loop iteration
+    auto bracketsPos = findInnermostBrackets(currentEquation);
+
+    if (bracketsPos[0] < 0 || bracketsPos[1] < 0) break;
+
+    // get flags once based on current string and bracket positions
+    auto bracketFlags = numBeforeAfter(currentEquation, bracketsPos);
+
+    // extract inside brackets once
+    auto innerExpression = extractSubstring(currentEquation, bracketsPos);
+
+    auto evaluatedStr = evaluateExpressionAsString(innerExpression);
+
+    currentEquation = replacement(evaluatedStr, currentEquation, bracketsPos);
+
+    // find brackets again on the UPDATED string
+    // update bracket positions for multiplication insertion
+    bracketsPos = findInnermostBrackets(currentEquation);
+
+    if (bracketsPos[0] < 0 || bracketsPos[1] < 0) {
+        // No brackets left to modify; continue to next iteration
+        continue;
     }
 
-    return 0;
+    bracketFlags = numBeforeAfter(currentEquation, bracketsPos);
+
+    currentEquation = insertMultiplicationAroundBrackets(currentEquation, bracketFlags, bracketsPos);
+
+    std::cout << "\nCurrent equation: " << currentEquation << std::endl;
+
+    iterations++;
+}
+
+    // at this point, either no operators or max iterations reached.
+    // evaluate any remaining expression (without brackets)
+    if (containsOperator(currentEquation)) {
+        currentEquation = evaluateExpressionAsString(currentEquation);
+        std::cout << "\nFinal evaluation: " << currentEquation << std::endl;
+    }
+
+    // return the final value as float
+    return std::stof(currentEquation);
 }
 
 bool calculator::calculator::containsOperator(const std::string equation) { // checks if the equation contains any operators.
     for (char c : equation) {
         if (c == '+' || c == '-' || c == '*' || c == '/') {
-            return true;  // Found an operator
+            return true;  // found an operator
         }
     }
-    return false;  // No operator found
+    return false;  // no operator found
 }
 
 bool calculator::calculator::consecutiveOperators(std::string const equation){ // checks if there are consecutive operators.
@@ -47,7 +83,7 @@ bool calculator::calculator::consecutiveOperators(std::string const equation){ /
     for (size_t i = 1; i < equation.size(); ++i) {
         if (operators.find(equation[i]) != std::string::npos &&
             operators.find(equation[i - 1]) != std::string::npos) {
-            condition = true; // Found consecutive operators
+            condition = true; // found consecutive operators
             std::cout << "\nEquation cannot have consecutive operators (++,+-).";
         }
     }
@@ -196,7 +232,7 @@ std::string calculator::calculator::evaluateExpressionAsString(const std::string
 
     result = add(result, lastValue);
 
-    // Convert result to string
+    // convert result to string
     std::ostringstream oss;
     oss << result;
 
@@ -210,7 +246,7 @@ std::string calculator::calculator::replacement(std::string result, std::string 
         return equation;
     }
 
-    std::string updated = equation.substr(0, bracketPos[0] + 1) + result + equation.substr(bracketPos[1]);         // include ')'
+    std::string updated = equation.substr(0, bracketPos[0] + 1) + result + equation.substr(bracketPos[1]);
 
     std::cout << "\nUpdated equation: " << updated;
     return updated;
@@ -225,7 +261,7 @@ std::string calculator::calculator::insertMultiplicationAroundBrackets(std::stri
     }
     
     if (bracketBool[2]) {
-        // Replace both brackets with '*', keep both characters
+        // replace both brackets with '*', keep both characters
         updated[bracketPos[0]] = '*';
         updated[bracketPos[1]] = '*';
                 std::cout << "\nReplaced both brackets with '*': " << updated << std::endl;
@@ -233,46 +269,27 @@ std::string calculator::calculator::insertMultiplicationAroundBrackets(std::stri
     }
 
     if (bracketBool[0]) {
-        // Replace left bracket with '*', delete right bracket
+        // replace left bracket with '*', delete right bracket
         updated[bracketPos[0]] = '*';
-        // Remove right bracket at index 'right'
+        // remove right bracket at index 'right'
         updated.erase(bracketPos[1], 1);
         std::cout << "\nReplaced left bracket with '*', deleted right bracket: " << updated << std::endl;
         return updated;
     }
 
     if (bracketBool[1]) {
-        // Replace right bracket with '*', delete left bracket
+        // replace right bracket with '*', delete left bracket
         updated[bracketPos[1]] = '*';
-        // Remove left bracket at index 'left'
+        // remove left bracket at index 'left'
         updated.erase(bracketPos[0], 1);
         std::cout << "\nReplaced right bracket with '*', deleted left bracket: " << updated << std::endl;
         return updated;
     }
-    
-    // If none true, return original
+
+    // if none true, return original
     std::cout << "\nNo replacements done. Equation: " << updated << std::endl;
     return updated;
 }
-
-// cleanup initial equation. DONE
-
-// go through the equation until an operator is detected. If detected, set a boolean to true. DONE
-
-// go through the equation string to find the innermost set of brackets. DONE
-    // if a '(' is detected, check if there is a number immeditately before it. Do the same, but for after ')'. DONE
-    // store this info as a bool. DONE
-
-// extract the numbers and operators from inside the brackets. DONE
-    // perform all operations inside the brackets on all the numbers inside the brackets. DONE
-    // multiply the final answer by the multiplier previously calculated.
-    
-// replace everything inside () of the string, including the brackets themselves, with the newly calculated value.
-
-// repeat the process until no operators are detected.
-
-
-
 
 float calculator::calculator::add(float const a, float const b){
     return a+b;
@@ -303,7 +320,7 @@ float calculator::calculator::fact_r(int const n){
 } // recursive factorial
 
 int main(){
-    std::string equation = "1+2(4+5+60(6+7*8/9)/500)";
+    std::string equation = "1+2(4*5+60(6+7*8/9)/500)";
 
     calculator::calculator calc(std::cout);
 
