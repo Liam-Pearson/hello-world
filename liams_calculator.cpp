@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <cctype>
+#include <utility>
 
 calculator::calculator::calculator(std::ostream& debug_log):debug_log(debug_log), memory (0.0f){
 
@@ -10,183 +12,267 @@ calculator::calculator::calculator(std::ostream& debug_log):debug_log(debug_log)
 
 float calculator::calculator::execute(std::string const equation){
 
-    std::vector<float> numbers;
-    std::vector<char> operators;
+    std::string cleanedEquation;
 
-    std::string current_number;
-    
-    std::string editableEquation;
-
-    for (char c : equation){ // checks all characters of the string.
-        if (std::isdigit(c) || c == '.'){ // checks if 'c' is a number.
-            current_number += c; // sets the current number string to 'c'.
-        }
-        else {
-            if(!current_number.empty()){ // if current number is not empty, place the current_number into the numbers vector.
-                numbers.push_back(std::stof(current_number));
-                current_number.clear();
-            }
-
-            operators.push_back(c); // place the operator into the operators vector.
+    if(containsOperator(equation) == true){
+        if(consecutiveOperators(equationLeadEndOpCleanup(equation)) == false && bracketsMatch(equationLeadEndOpCleanup(equation)) == true){
+            cleanedEquation = equationLeadEndOpCleanup(wrapInBrackets(equation));
+            std::cout << "\nEquation: " << cleanedEquation;
+            numBeforeAfter(cleanedEquation, findInnermostBrackets(cleanedEquation));
+            cleanedEquation = replacement(evaluateExpressionAsString(extractSubstring(cleanedEquation, findInnermostBrackets(cleanedEquation))),cleanedEquation, findInnermostBrackets(cleanedEquation));
+            cleanedEquation = insertMultiplicationAroundBrackets(cleanedEquation, numBeforeAfter(cleanedEquation, findInnermostBrackets(cleanedEquation)), findInnermostBrackets(cleanedEquation));
         }
     }
-
-    if (!current_number.empty()) { // accounts for the last number.
-        numbers.push_back(std::stof(current_number));
+    else {
+        std::cout << "\nEquation does not contain any operators";
     }
-
-    editableEquation = equation;
-
-    std::cout << "\n" << equationEater(editableEquation);
 
     return 0;
 }
 
-std::string calculator::calculator::equationEater(std::string equation){
-
-    std::string editableEquation = equation;
-
-    std::vector<float> numbers;
-    std::vector<char> operators;
-
-    std::string current_number;
-
-    std::vector<float> tempNumbers; // temp vector for numbers contained in brackets.
-    std::vector<char> tempOperators; // temp vector for operators containedin brackets.
-    std::string tempEquation;
-    std::vector<int> leftRightIndex;
-
-    leftRightIndex = bracketDetect(equation);
-    
-    tempEquation = equation.substr(leftRightIndex[0]+1, leftRightIndex[1]-2 - leftRightIndex[0]+1);
-
-    for (char c : tempEquation){ // checks all characters of the string.
-        if (std::isdigit(c) || c == '.'){ // checks if 'c' is a number.
-            current_number += c; // sets the current number string to 'c'.
-        }
-        else {
-            if(!current_number.empty()){ // if current number is not empty, place the current_number into the numbers vector.
-                tempNumbers.push_back(std::stof(current_number));
-                current_number.clear();
-            }
-
-            tempOperators.push_back(c); // place the operator into the operators vector.
+bool calculator::calculator::containsOperator(const std::string equation) { // checks if the equation contains any operators.
+    for (char c : equation) {
+        if (c == '+' || c == '-' || c == '*' || c == '/') {
+            return true;  // Found an operator
         }
     }
-
-    if (!current_number.empty()) { // accounts for the last number.
-        tempNumbers.push_back(std::stof(current_number));
-    }
-
-    int result = calc(tempNumbers, tempOperators);
-    std::string strResult = std::to_string(result);
-
-    editableEquation.erase(leftRightIndex[0],leftRightIndex[1]-leftRightIndex[0]+1); // erase the operator used for the calculation.
-    editableEquation.replace(leftRightIndex[0],1,strResult);
-    if(leftRightIndex[2]>1){
-        editableEquation += ')';
-    }
-
-    return editableEquation;
+    return false;  // No operator found
 }
 
-std::vector<int> calculator::calculator::bracketDetect(std::string ops){
-    int index = 0;
-    int leftBracketIndex = 0;
-    int rightBracketIndex = 0;
-    int bracketCounter = 0;
+bool calculator::calculator::consecutiveOperators(std::string const equation){ // checks if there are consecutive operators.
+    bool condition = false;
 
-    std::string operators = ops; // vector containing all operator characters.
+    std::string operators = "+-*/";
 
-    std::vector<int> leftRightIndex; // vector to contain the left and right bracket index.
-
-    for (int i = 0; i < operators.size(); ++i){ // goes through the vector until a closing bracket ')' is found.
-        if (operators[i] == '('){
-            leftBracketIndex = index;
-            std::cout << "\nOpening bracket at operator # " << leftBracketIndex;
-            bracketCounter++;
+    for (size_t i = 1; i < equation.size(); ++i) {
+        if (operators.find(equation[i]) != std::string::npos &&
+            operators.find(equation[i - 1]) != std::string::npos) {
+            condition = true; // Found consecutive operators
+            std::cout << "\nEquation cannot have consecutive operators (++,+-).";
         }
-        if (operators[i] == ')'){
-            rightBracketIndex = index;
-            std::cout << "\nClosing bracket at operator # " << rightBracketIndex;
+    }
+
+    return condition;
+}
+
+std::string calculator::calculator::equationLeadEndOpCleanup(std::string const equation){ // cleans the equation of any leading or ending double or greater operators.
+
+    std::string operators = "+-*/^"; // list of operators to be removed if the equation contains them at the start or finish.
+    size_t start = 0;
+    size_t end = equation.length();
+
+    // Remove leading operators
+    while (start < end && operators.find(equation[start]) != std::string::npos) {
+        start++;
+        std::cout << "Removed leading operator to make equation valid.\n";
+    }
+
+    // Remove trailing operators
+    while (end > start && operators.find(equation[end - 1]) != std::string::npos) {
+        end--;
+        std::cout << "Removed trailing operators to make equation valid.\n";
+    }
+
+    return equation.substr(start, end - start);
+}
+
+std::string calculator::calculator::wrapInBrackets(const std::string equation) {
+    return "(" + equation + ")";
+}
+
+
+bool calculator::calculator::bracketsMatch(std::string const equation){ // checks if the number of opening brackets matches the number of closing brackets.
+    int openCount = 0;
+    int closeCount = 0;
+
+    for (char c : equation) {
+        if (c == '(') openCount++;
+        else if (c == ')') closeCount++;
+    }
+
+    if(openCount != closeCount){
+        std::cout << "\nEquation closing and opening bracket count do not match.";
+    }
+
+    // Return true if the number of closing and opening brackets match.
+    return openCount == closeCount;
+}
+
+std::vector<int> calculator::calculator::findInnermostBrackets(const std::string equation) { // finds the innermost set of brackets.
+    int openBracket = -1;
+    int closedBracket = -1;
+
+    for (int i = 0; i < equation.size(); ++i) {
+        if (equation[i] == '(') {
+            openBracket = i;  // store the position of the latest '('
+        } else if (equation[i] == ')') { // if ')' is found, break out.
+            closedBracket = i;
             break;
         }
-        index++;
     }
 
-    // assigns left and right bracket index positions.
-    leftRightIndex.push_back(leftBracketIndex);
-    leftRightIndex.push_back(rightBracketIndex);
-    leftRightIndex.push_back(bracketCounter);
+    std::cout << "\nBrackets are at: " << openBracket << " " << closedBracket;
 
-    return leftRightIndex;
+    return {openBracket, closedBracket};
 }
 
-float calculator::calculator::calc(std::vector<float> nums, std::vector<char> ops){
-    int opIndex = 0; // index posiiton of the current operator in the operators vector.
-    float result = 0; // result of operation performed.
-    int staticOpIndex=0; // index of the BEDMAS operator to be performed.
+std::vector<bool> calculator::calculator::numBeforeAfter(std::string equation, std::vector<int> bracketPos){ // checks if there are numbers immediately before or after a set of brackets.
 
-    std::vector<float> numbers = nums;
-    std::vector<char> operators = ops;
+    std::vector<bool> numCheck(3, false);
 
-    std::vector<char> staticOperators = {'/', '*', '+', '-'}; // BEDMAS. Changing the order of this array changes the order of operations.
+    if (std::isdigit(equation[bracketPos[0]-1]) == 1) {
+        numCheck[0] = true;
+        std::cout<< "\nMultiplier before brackets.";
+    }
 
-    for(char c : staticOperators){ // indexes through all BEDMAS operators.
-        for (char c : operators){ // indexes through all operators in the operator vector.
-            if(operators[opIndex] == staticOperators[staticOpIndex]){ // if the operator at the current index is also equal to the current most important operator (BEDMADS). perform the switch cases.
-                switch(operators[opIndex]){
-                    case '*':
-                        result = multiply(numbers[opIndex], numbers[opIndex + 1]);
-                        std::cout << "\nMultiplying: " << numbers[opIndex] << " by " << numbers[opIndex+1];
-                        std::cout << "\nResult: " << result;
-                        break;
-                    case '/':
-                        result = divide(numbers[opIndex], numbers[opIndex + 1]);
-                        std::cout << "\nDividing: " << numbers[opIndex] << " by " << numbers[opIndex+1];
-                        std::cout << "\nResult: " << result;
-                        break;
-                    case '+':
-                        result = add(numbers[opIndex], numbers[opIndex + 1]);
-                        std::cout << "\nAdding: " << numbers[opIndex] << " to " << numbers[opIndex+1];
-                        std::cout << "\nResult: " << result;
-                        break;
-                    case '-':
-                        result = subtract(numbers[opIndex], numbers[opIndex + 1]); 
-                        std::cout << "\nSubtracting: " << numbers[opIndex+1] << " from " << numbers[opIndex];
-                        std::cout << "\nResult: " << result;
-                        break;
-                    default:
-                        std::cerr << "Unknown operator encountered: " << operators[opIndex] << '\n';
-                        break;
-                }
+    if (std::isdigit(equation[bracketPos[1]+1])) {
+        numCheck[1] = true;
+        std::cout<< "\nMultiplier after brackets.";
+    }
 
-                numbers.erase(numbers.begin() + opIndex, numbers.begin() + opIndex + 2); // erase the two numbers used to perform the operartion.
-                numbers.insert(numbers.begin() + opIndex, result); // insert the result of the calculation into the  left most position that had a value erased.
-                operators.erase(operators.begin() + opIndex); // erase the operator used for the calculation.
+    if (numCheck[0] == true && numCheck[1] == true){
+        numCheck[2] = true;
+    }
+    else {
+        numCheck[2] = false;
+    }
 
-                result = 0; // reset the result value for the next calculation.
-                std::cout << "\nNumbers: ";
-                for (float n : numbers) std::cout << n << " ";
-                std::cout << "\nOperators: ";
-                for (char op : operators) std::cout << op << " ";
-            }
-            else{
-                opIndex++; // if the current operator is not the most important operator, increment forwards until most important operator is found, or if end of vector has been reached.
-            }
+    return numCheck;
+}
 
-            //std::cout << "\n" << result;
-            //std::cout << "\nopIndex: " << opIndex;
-            
-            result = 0; // reset the result value to prepare for the next calculation.       
+std::string calculator::calculator::extractSubstring(const std::string equation, std::vector<int> bracketsPos) { // extracts the equation inside of brackets.
+
+    int start = bracketsPos[0]+1;
+    int end = bracketsPos[1]-1;
+
+    if (start < 0) start = 0;
+    if (end >= (int)equation.size()) end = equation.size() - 1;
+    if (start > end) return "";
+
+    std::cout << "\n" << equation.substr(start, end - start + 1);
+
+    return equation.substr(start, end - start + 1);
+}
+
+std::string calculator::calculator::evaluateExpressionAsString(const std::string equation) {
+    float currentNum = 0.0f;
+    float lastValue = 0.0f;
+    float result = 0.0f;
+    char lastOp = '+';
+    int i = 0;
+
+    while (i < equation.length()) {
+        if (std::isspace(equation[i])) {
+            i++;
+            continue;
         }
 
-        staticOpIndex++; // increment forwards the most important operator (BEDMAS).
-        opIndex=0; // reset the operator index.
+        if (std::isdigit(equation[i]) || equation[i] == '.') {
+            std::string numStr;
+            while (i < equation.length() && (std::isdigit(equation[i]) || equation[i] == '.')) {
+                numStr += equation[i++];
+            }
+            currentNum = std::stof(numStr);
+
+            if (lastOp == '*') {
+                lastValue = multiply(lastValue, currentNum);
+            } else if (lastOp == '/') {
+                if (currentNum == 0) throw std::runtime_error("Division by zero");
+                lastValue = divide(lastValue, currentNum);
+            } else if (lastOp == '+') {
+                result = add(result, lastValue);
+                lastValue = currentNum;
+            } else if (lastOp == '-') {
+                result = add(result, lastValue);
+                lastValue = multiply(currentNum, -1.0f);
+            }
+        } else if (equation[i] == '+' || equation[i] == '-' || equation[i] == '*' || equation[i] == '/') {
+            lastOp = equation[i];
+            i++;
+        } else {
+            throw std::runtime_error("Invalid character in expression");
+        }
     }
 
-    return numbers[0];
+    result = add(result, lastValue);
+
+    // Convert result to string
+    std::ostringstream oss;
+    oss << result;
+
+    std::cout << "\nCalculation result: " << oss.str();
+    return oss.str();
 }
+
+std::string calculator::calculator::replacement(std::string result, std::string equation, std::vector<int> bracketPos){
+    if (bracketPos[0] < 0 || bracketPos[1] < bracketPos[0] || bracketPos[1] >= equation.size() || equation[bracketPos[0]] != '(' || equation[bracketPos[1]] != ')') {
+        std::cerr << "\nInvalid bracket positions.";
+        return equation;
+    }
+
+    std::string updated = equation.substr(0, bracketPos[0] + 1) + result + equation.substr(bracketPos[1]);         // include ')'
+
+    std::cout << "\nUpdated equation: " << updated;
+    return updated;
+}
+
+std::string calculator::calculator::insertMultiplicationAroundBrackets(std::string equation, std::vector<bool> bracketBool, std::vector<int> bracketPos){
+    std::string updated = equation;
+
+    if (bracketBool.size() < 3 || bracketPos.size() < 2) {
+        std::cout << "\nInvalid input sizes.";
+        return updated;
+    }
+    
+    if (bracketBool[2]) {
+        // Replace both brackets with '*', keep both characters
+        updated[bracketPos[0]] = '*';
+        updated[bracketPos[1]] = '*';
+                std::cout << "\nReplaced both brackets with '*': " << updated << std::endl;
+        return updated;
+    }
+
+    if (bracketBool[0]) {
+        // Replace left bracket with '*', delete right bracket
+        updated[bracketPos[0]] = '*';
+        // Remove right bracket at index 'right'
+        updated.erase(bracketPos[1], 1);
+        std::cout << "\nReplaced left bracket with '*', deleted right bracket: " << updated << std::endl;
+        return updated;
+    }
+
+    if (bracketBool[1]) {
+        // Replace right bracket with '*', delete left bracket
+        updated[bracketPos[1]] = '*';
+        // Remove left bracket at index 'left'
+        updated.erase(bracketPos[0], 1);
+        std::cout << "\nReplaced right bracket with '*', deleted left bracket: " << updated << std::endl;
+        return updated;
+    }
+    
+    // If none true, return original
+    std::cout << "\nNo replacements done. Equation: " << updated << std::endl;
+    return updated;
+}
+
+// cleanup initial equation. DONE
+
+// go through the equation until an operator is detected. If detected, set a boolean to true. DONE
+
+// go through the equation string to find the innermost set of brackets. DONE
+    // if a '(' is detected, check if there is a number immeditately before it. Do the same, but for after ')'. DONE
+    // store this info as a bool. DONE
+
+// extract the numbers and operators from inside the brackets. DONE
+    // perform all operations inside the brackets on all the numbers inside the brackets. DONE
+    // multiply the final answer by the multiplier previously calculated.
+    
+// replace everything inside () of the string, including the brackets themselves, with the newly calculated value.
+
+// repeat the process until no operators are detected.
+
+
+
 
 float calculator::calculator::add(float const a, float const b){
     return a+b;
@@ -217,12 +303,9 @@ float calculator::calculator::fact_r(int const n){
 } // recursive factorial
 
 int main(){
-    calculator::calculator myCalc(std::cout);
-    std::string input;
-    std::cout << "Enter a math equation (e.g., 3+4*2): ";
-    std::getline(std::cin, input);
+    std::string equation = "1+2(4+5+60(6+7*8/9)/500)";
 
-    float result = myCalc.execute(input);
+    calculator::calculator calc(std::cout);
 
-    return 0;
+    calc.execute(equation);
 }
