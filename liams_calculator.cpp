@@ -17,7 +17,7 @@ float calculator::calculator::execute(std::string const equation){
 
     int i =0;
 
-    if(consecutiveOperators(cleanedEquation) == false && bracketsMatch(cleanedEquation) == true && equationLeadEndOpCleanup(cleanedEquation) == true){
+    if(hasSpaces(cleanedEquation) == false && consecutiveOperators(cleanedEquation) == false && bracketsMatch(cleanedEquation) == true && equationLeadEndOpCleanup(cleanedEquation) == true && hasInvalidLeadingFactorial(cleanedEquation) == false){
         cleanedEquation = wrapInBrackets(cleanedEquation);
         while(containsOperator(cleanedEquation) == true && i < 100 ){
             std::cout << "\nEquation: " << cleanedEquation;
@@ -29,6 +29,16 @@ float calculator::calculator::execute(std::string const equation){
     }
  
     return 0;
+}
+
+bool calculator::calculator::hasSpaces(const std::string equation) {
+    for (char c : equation) {
+        if (c == ' ') {
+            std::cout << "\nEquation cannot have spaces.";
+            return true;
+        }
+    }
+    return false;
 }
 
 bool calculator::calculator::containsOperator(const std::string equation) { // checks if the equation contains any operators.
@@ -52,7 +62,7 @@ bool calculator::calculator::consecutiveOperators(std::string const equation){ /
         if (operators.find(equation[i]) != std::string::npos &&
             operators.find(equation[i - 1]) != std::string::npos) {
             condition = true; // Found consecutive operators
-            std::cout << "\nEquation cannot have consecutive operators (++,+-).";
+            std::cout << "\nEquation cannot have consecutive operators (++,-+, etc.).";
         }
     }
 
@@ -80,6 +90,16 @@ bool calculator::calculator::equationLeadEndOpCleanup(std::string const equation
     }
 
     return true;
+}
+
+bool calculator::calculator::hasInvalidLeadingFactorial(const std::string equation) {
+    for (size_t i = 1; i < equation.length(); ++i) {
+        if (equation[i - 1] == '!' && (std::isdigit(equation[i]) || equation[i] == '.')) {
+            std::cout << "\nInvalid: '!' appears before number at position " << i;
+            return true;
+        }
+    }
+    return false;
 }
 
 std::string calculator::calculator::wrapInBrackets(const std::string equation) {
@@ -117,23 +137,28 @@ std::vector<int> calculator::calculator::findInnermostBrackets(const std::string
         }
     }
 
-    std::cout << "\nBrackets are at: " << openBracket << " " << closedBracket;
+    //std::cout << "\nBrackets are at: " << openBracket << " " << closedBracket;
 
     return {openBracket, closedBracket};
 }
 
 std::vector<bool> calculator::calculator::numBeforeAfter(std::string equation, std::vector<int> bracketPos){ // checks if there are numbers immediately before or after a set of brackets.
 
-    std::vector<bool> numCheck(3, false);
+    std::vector<bool> numCheck(4, false);
 
-    if (std::isdigit(equation[bracketPos[0]-1]) == 1) {
+    if (std::isdigit(equation[bracketPos[0]-1]) == 1 || equation[bracketPos[0] - 1] == '!') {
         numCheck[0] = true;
-        std::cout<< "\nMultiplier before brackets.";
+        //std::cout<< "\nMultiplier before brackets.";
     }
 
     if (std::isdigit(equation[bracketPos[1]+1])) {
         numCheck[1] = true;
-        std::cout<< "\nMultiplier after brackets.";
+        //std::cout<< "\nMultiplier after brackets.";
+    }
+
+    if (equation[bracketPos[1]+1] == '!') {
+        numCheck[3] = true;
+        //std::cout<< "\nFactorial after brackets.";
     }
 
     if (numCheck[0] == true && numCheck[1] == true){
@@ -178,7 +203,18 @@ std::string calculator::calculator::evaluateExpressionAsString(const std::string
             while (i < equation.length() && (std::isdigit(equation[i]) || equation[i] == '.')) {
                 numStr += equation[i++];
             }
+
             currentNum = std::stof(numStr);
+            
+            // Check for factorial
+            if (i < equation.length() && equation[i] == '!') {
+                if (currentNum < 0 || std::floor(currentNum) != currentNum) {
+                    throw std::runtime_error("Factorial only defined for non-negative integers");
+                }
+
+                currentNum = fact_i(static_cast<int>(currentNum));
+                ++i;
+            }
 
             if (lastOp == '*') {
                 lastValue = multiply(lastValue, currentNum);
@@ -235,7 +271,7 @@ std::string calculator::calculator::insertMultiplicationAroundBrackets(std::stri
         // Replace both brackets with '*', keep both characters
         updated[bracketPos[0]] = '*';
         updated[bracketPos[1]] = '*';
-                std::cout << "\nReplaced both brackets with '*': " << updated << std::endl;
+        //std::cout << "\nReplaced both brackets with '*': " << updated << std::endl;
         return updated;
     }
 
@@ -244,8 +280,13 @@ std::string calculator::calculator::insertMultiplicationAroundBrackets(std::stri
         updated[bracketPos[0]] = '*';
         // Remove right bracket at index 'right'
         updated.erase(bracketPos[1], 1);
-        std::cout << "\nReplaced left bracket with '*', deleted right bracket: " << updated << std::endl;
+        //std::cout << "\nReplaced left bracket with '*', deleted right bracket: " << updated << std::endl;
         return updated;
+    }
+
+    if (bracketBool[3]) {
+        updated.erase(bracketPos[1], 1);
+        updated.erase(bracketPos[0], 1);
     }
 
     if (bracketBool[1]) {
@@ -253,7 +294,7 @@ std::string calculator::calculator::insertMultiplicationAroundBrackets(std::stri
         updated[bracketPos[1]] = '*';
         // Remove left bracket at index 'left'
         updated.erase(bracketPos[0], 1);
-        std::cout << "\nReplaced right bracket with '*', deleted left bracket: " << updated << std::endl;
+        //std::cout << "\nReplaced right bracket with '*', deleted left bracket: " << updated << std::endl;
         return updated;
     }
 
@@ -307,10 +348,9 @@ float calculator::calculator::fact_r(int const n){
     return n * fact_r(n - 1);
 } // recursive factorial
 
-//int main(){
-  //  std::string equation = "1+2(4^5.2+60(6+7*8/9)/500)";
-//
-  //  calculator::calculator calc(std::cout);
-//
-  //  calc.execute(equation);
-//}
+int main(){
+  std::string equation = "1+2(2^2+6!((1+4)!+7*8/9)/500)";
+
+  calculator::calculator calc(std::cout);
+  calc.execute(equation);
+}

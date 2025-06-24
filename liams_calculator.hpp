@@ -23,8 +23,10 @@ namespace calculator{
 		float fact_i(int const n); // iterative factorial
 		float fact_r(int const n); // recursive factorial
 
+		bool hasSpaces(const std::string equation);
 		bool consecutiveOperators(std::string const equation);
 		bool equationLeadEndOpCleanup(std::string const equation);
+		bool hasInvalidLeadingFactorial(const std::string equation);
 		std::string wrapInBrackets(const std::string equation);
 		bool bracketsMatch(std::string const equation);
 		bool containsOperator(const std::string equation);
