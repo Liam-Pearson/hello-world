@@ -24,7 +24,7 @@ namespace calculator{
 		float fact_r(int const n); // recursive factorial
 
 		bool consecutiveOperators(std::string const equation);
-		std::string equationLeadEndOpCleanup(std::string const equation);
+		bool equationLeadEndOpCleanup(std::string const equation);
 		std::string wrapInBrackets(const std::string equation);
 		bool bracketsMatch(std::string const equation);
 		bool containsOperator(const std::string equation);
